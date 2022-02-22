@@ -1,9 +1,9 @@
 // Project Type
-
 enum ProjectStatus {
   Active,
-  Finished,
+  Finished
 }
+
 class Project {
   constructor(
     public id: string,
@@ -15,7 +15,6 @@ class Project {
 }
 
 // Project State Management
-
 type Listener<T> = (items: T[]) => void;
 
 class State<T> {
@@ -26,7 +25,7 @@ class State<T> {
   }
 }
 
-class ProjectState extends State<Project>{
+class ProjectState extends State<Project> {
   private projects: Project[] = [];
   private static instance: ProjectState;
 
@@ -37,11 +36,10 @@ class ProjectState extends State<Project>{
   static getInstance() {
     if (this.instance) {
       return this.instance;
-    } else this.instance = new ProjectState();
+    }
+    this.instance = new ProjectState();
     return this.instance;
   }
-
- 
 
   addProject(title: string, description: string, numOfPeople: number) {
     const newProject = new Project(
@@ -63,8 +61,8 @@ const projectState = ProjectState.getInstance();
 // Validation
 interface Validatable {
   value: string | number;
-  required?: boolean; // | undefined --- if no ? result is the same
-  minLnegth?: number;
+  required?: boolean;
+  minLength?: number;
   maxLength?: number;
   min?: number;
   max?: number;
@@ -76,11 +74,11 @@ function validate(validatableInput: Validatable) {
     isValid = isValid && validatableInput.value.toString().trim().length !== 0;
   }
   if (
-    validatableInput.minLnegth != null &&
+    validatableInput.minLength != null &&
     typeof validatableInput.value === 'string'
   ) {
     isValid =
-      isValid && validatableInput.value.length >= validatableInput.minLnegth;
+      isValid && validatableInput.value.length >= validatableInput.minLength;
   }
   if (
     validatableInput.maxLength != null &&
@@ -91,34 +89,30 @@ function validate(validatableInput: Validatable) {
   }
   if (
     validatableInput.min != null &&
-    typeof validatableInput.min === 'number'
+    typeof validatableInput.value === 'number'
   ) {
     isValid = isValid && validatableInput.value >= validatableInput.min;
   }
   if (
-    validatableInput.min != null &&
-    typeof validatableInput.max === 'number'
+    validatableInput.max != null &&
+    typeof validatableInput.value === 'number'
   ) {
     isValid = isValid && validatableInput.value <= validatableInput.max;
   }
   return isValid;
 }
 
-// AutoBind decorator
-function AutoBind(
-  _target: any,
-  _methodName: string,
-  descriptor: PropertyDescriptor
-) {
+// autobind decorator
+function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
-  const adjustableDescriptor: PropertyDescriptor = {
+  const adjDescriptor: PropertyDescriptor = {
     configurable: true,
     get() {
       const boundFn = originalMethod.bind(this);
       return boundFn;
-    },
+    }
   };
-  return adjustableDescriptor;
+  return adjDescriptor;
 }
 
 // Component Base Class
@@ -135,14 +129,13 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
   ) {
     this.templateElement = document.getElementById(
       templateId
-    ) as HTMLTemplateElement;
-    this.hostElement = document.getElementById(hostElementId) as T;
+    )! as HTMLTemplateElement;
+    this.hostElement = document.getElementById(hostElementId)! as T;
 
     const importedNode = document.importNode(
       this.templateElement.content,
       true
     );
-
     this.element = importedNode.firstElementChild as U;
     if (newElementId) {
       this.element.id = newElementId;
@@ -162,39 +155,48 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
   abstract renderContent(): void;
 }
 
-// ProjectList Class
+// ProjectItem Class
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
+  private project: Project;
 
+  constructor(hostId: string, project: Project) {
+    super('single-project', hostId, false, project.id);
+    this.project = project;
+
+    this.configure();
+    this.renderContent();
+  }
+
+  configure() {}
+
+  renderContent() {
+    this.element.querySelector('h2')!.textContent = this.project.title;
+    this.element.querySelector(
+      'h3'
+    )!.textContent = this.project.people.toString();
+    this.element.querySelector('p')!.textContent = this.project.description;
+  }
+}
+
+// ProjectList Class
 class ProjectList extends Component<HTMLDivElement, HTMLElement> {
   assignedProjects: Project[];
 
   constructor(private type: 'active' | 'finished') {
     super('project-list', 'app', false, `${type}-projects`);
-
     this.assignedProjects = [];
 
+    this.configure();
     this.renderContent();
-  }
-
-  private renderProjects() {
-    const listEl = document.getElementById(
-      `${this.type}-projects-list`
-    )! as HTMLUListElement;
-    listEl.innerHTML = '';
-    for (const prjItem of this.assignedProjects) {
-      const listItem = document.createElement('li');
-      listItem.textContent = prjItem.title;
-      listEl.appendChild(listItem);
-    }
   }
 
   configure() {
     projectState.addListener((projects: Project[]) => {
-      const relevantProjects = projects.filter((project) => {
+      const relevantProjects = projects.filter(prj => {
         if (this.type === 'active') {
-          return project.status === ProjectStatus.Active;
-        } else {
-          return project.status === ProjectStatus.Finished;
+          return prj.status === ProjectStatus.Active;
         }
+        return prj.status === ProjectStatus.Finished;
       });
       this.assignedProjects = relevantProjects;
       this.renderProjects();
@@ -207,6 +209,16 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     this.element.querySelector('h2')!.textContent =
       this.type.toUpperCase() + ' PROJECTS';
   }
+
+  private renderProjects() {
+    const listEl = document.getElementById(
+      `${this.type}-projects-list`
+    )! as HTMLUListElement;
+    listEl.innerHTML = '';
+    for (const prjItem of this.assignedProjects) {
+      new ProjectItem(this.element.querySelector('ul')!.id, prjItem);
+    }
+  }
 }
 
 // ProjectInput Class
@@ -217,7 +229,6 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
 
   constructor() {
     super('project-input', 'app', true, 'user-input');
-
     this.titleInputElement = this.element.querySelector(
       '#title'
     ) as HTMLInputElement;
@@ -227,8 +238,11 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
     this.peopleInputElement = this.element.querySelector(
       '#people'
     ) as HTMLInputElement;
-
     this.configure();
+  }
+
+  configure() {
+    this.element.addEventListener('submit', this.submitHandler);
   }
 
   renderContent() {}
@@ -240,25 +254,27 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
 
     const titleValidatable: Validatable = {
       value: enteredTitle,
-      required: true,
+      required: true
     };
     const descriptionValidatable: Validatable = {
       value: enteredDescription,
-      minLnegth: 5,
       required: true,
+      minLength: 5
     };
-    const enteredValidatablee: Validatable = {
+    const peopleValidatable: Validatable = {
       value: +enteredPeople,
-      min: 1,
       required: true,
+      min: 1,
+      max: 5
     };
 
     if (
       !validate(titleValidatable) ||
       !validate(descriptionValidatable) ||
-      !validate(enteredValidatablee)
+      !validate(peopleValidatable)
     ) {
       alert('Invalid input, please try again!');
+      return;
     } else {
       return [enteredTitle, enteredDescription, +enteredPeople];
     }
@@ -270,23 +286,18 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
     this.peopleInputElement.value = '';
   }
 
-  @AutoBind
+  @autobind
   private submitHandler(event: Event) {
     event.preventDefault();
     const userInput = this.gatherUserInput();
     if (Array.isArray(userInput)) {
       const [title, desc, people] = userInput;
       projectState.addProject(title, desc, people);
-      console.log(projectState, 'PROJECT STATE');
+      this.clearInputs();
     }
-    this.clearInputs();
-  }
-
-  configure() {
-    this.element.addEventListener('submit', this.submitHandler);
   }
 }
 
 const prjInput = new ProjectInput();
-const activeProjectList = new ProjectList('active');
-const finishedProjectList = new ProjectList('finished');
+const activePrjList = new ProjectList('active');
+const finishedPrjList = new ProjectList('finished');
