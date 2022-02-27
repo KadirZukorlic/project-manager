@@ -2,9 +2,9 @@
 /// <reference path="project-model.ts"/>
 /// <reference path="project-state.ts"/>
 /// <reference path="validation.ts"/>
+/// <reference path="autobind-decorator.ts"/>
 
 namespace App {
-  
   // Component Base Class
   abstract class Component<T extends HTMLElement, U extends HTMLElement> {
     templateElement: HTMLTemplateElement;
