@@ -1,6 +1,9 @@
-/// <reference path="base-component.ts" />
-
-namespace App {
+  import { Component } from "./base-component";
+  import { DragTarget } from "../models/drag-drop";
+  import { Project, ProjectStatus } from "../models/project";
+  import { autobind } from "../decorators/autobind";
+  import { projectState } from "../state/project-state";
+  import { ProjectItem } from "./project-item";
   // ProjectList Class
   export class ProjectList
     extends Component<HTMLDivElement, HTMLElement>
@@ -74,4 +77,4 @@ namespace App {
       }
     }
   }
-}
+
